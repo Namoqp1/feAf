@@ -765,6 +765,315 @@ Misc:AddToggle("Anti AFK", {
 	end})
 
 
+
+
+
+
+local Slider = Full_Auto_Play:AddSlider("Placement Size", {
+	Title = "Placement Size",
+	Description = "Select Placement Size For PlaceTower",
+	Default = _G.Size or 0,
+	Min = 0,
+	Max = 15,
+	Rounding = 0,
+	Callback = function(Value)
+		_G.Size = Value
+		saveSettings()
+		gen_size()
+	end
+})
+
+
+local Sliderr = Full_Auto_Play:AddSlider("Placement Distance", {
+	Title = "Placement Distance",
+	Description = "Select Placement Distance For PlaceTower",
+	Default = _G.Distance or 0,
+	Min = 0,
+	Max = 100,
+	Rounding = 0,
+	Callback = function(Value)
+		_G.Distance = Value
+		saveSettings()
+		create_line()
+	end
+})
+
+local mamung = Full_Auto_Play:AddDropdown("Select Slot", {
+	Title = "Select Slot",
+	Description = "",
+	Values = {1,2,3,4,5},
+	Multi = true,
+	Default = _G.Selectslot or {},
+	Callback = function(ezs)
+		_G.Selectslot = ezs
+		saveSettings()
+	end
+})
+
+
+Full_Auto_Play:AddToggle("Show Hologram", {
+	Title = "Show Hologram",
+	Default = _G.Hologram,
+	Callback = function(bool)
+		_G.Hologram = bool
+		saveSettings()
+		if _G.Hologram then
+			task.spawn(function()
+				while _G.Hologram and task.wait() do
+					xpcall(function()
+						if game.PlaceId ~= 123662243100680 then
+							workspace.CenterPart:FindFirstChild("CirclePart").Transparency = 0.5
+							repeat task.wait() until not _G.Hologram
+							workspace.CenterPart:FindFirstChild("CirclePart").Transparency = 1
+						end
+					end,print)
+				end
+			end)
+		end
+	end
+})
+
+
+Full_Auto_Play:AddToggle("Fully Auto Play", {
+	Title = "Fully Auto Play",
+	Default = _G.autoplay,
+	Callback = function(bool)
+		_G.autoplay = bool
+		saveSettings()
+		if _G.autoplay then
+			task.spawn(function()
+				while _G.autoplay and task.wait() do
+					xpcall(function()
+						if game.PlaceId ~= 123662243100680 then
+							local enemy = workspace.Enemies:FindFirstChildOfClass("Model").RootPart.Position
+							for i, v in pairs(workspace.GeneratedParts:GetChildren()) do
+								for _,slot in pairs({1,2,3,4,5}) do
+									if _G.Selectslot[slot] then
+										if tonumber(v.Name) == tonumber(_G.Distance) then
+											workspace.CenterPart.CFrame = v.CFrame
+											for e,unit in pairs(workspace.CenterPart:GetChildren()) do
+												if unit.Name ~= "CirclePart" then
+													local args = {
+														[1] = CFrame.new(unit.Position.X, enemy.Y-0.3, unit.Position.Z),
+														[2] = slot
+													}
+
+													game:GetService("ReplicatedStorage"):WaitForChild("Packages"):WaitForChild("_Index"):WaitForChild("sleitnick_knit@1.7.0"):WaitForChild("knit"):WaitForChild("Services"):WaitForChild("TowerService"):WaitForChild("RF"):WaitForChild("PlaceTower"):InvokeServer(unpack(args))
+												end
+											end
+										end
+									end
+								end
+							end
+
+							for _,unit in pairs(workspace.Friendlies:GetChildren()) do
+								local args = {
+									[1] = unit:GetAttribute("Id")
+								}
+
+								game:GetService("ReplicatedStorage"):WaitForChild("Packages"):WaitForChild("_Index"):WaitForChild("sleitnick_knit@1.7.0"):WaitForChild("knit"):WaitForChild("Services"):WaitForChild("GameService"):WaitForChild("RF"):WaitForChild("UpgradeTower"):InvokeServer(unpack(args))
+							end
+						end
+					end,print)
+				end
+			end)
+		end
+	end
+})
+
+local Select_Speed = Ingame:AddDropdown("Select Speed", {
+	Title = "Select Speed",
+	Values = {1 ,2 ,3 ,5},
+	Multi = false,
+	Default = _G.selectedSpeed,
+	Callback = function(selected)
+		_G.selectedSpeed = selected
+		saveSettings()
+	end
+})
+
+Ingame:AddToggle("Auto Speed Vote", {
+	Title = "Auto Speed Vote",
+	Description = "Automatic speed up",
+	Default = _G.Speed, 
+	Callback = function(bool)
+		_G.Speed = bool
+		saveSettings()
+		local check = false
+
+		task.spawn(function()
+			while _G.Speed and task.wait() do
+				xpcall(function()
+					if game.PlaceId ~= 123662243100680 then
+						if not check then
+							local args = {
+								[1] = convert_speed(_G.selectedSpeed)
+							}
+
+							game:GetService("ReplicatedStorage"):WaitForChild("Packages"):WaitForChild("_Index"):WaitForChild("sleitnick_knit@1.7.0"):WaitForChild("knit"):WaitForChild("Services"):WaitForChild("GameService"):WaitForChild("RF"):WaitForChild("ChangeGameSpeed"):InvokeServer(unpack(args))
+							task.wait(1)
+							check = true
+						end
+					end
+				end,print)
+			end
+		end)
+	end
+})
+
+
+Ingame:AddToggle("Auto Replay", {
+	Title = "Auto Replay",
+	Description = "Start game again / Replay game",
+	Default = _G.AutoReplay,
+	Callback = function(bool)
+		_G.AutoReplay = bool
+		saveSettings()
+		task.spawn(function()
+			while _G.AutoReplay and task.wait() do
+				xpcall(function()
+					if game.PlaceId ~= 123662243100680 then
+						if playerGui.RoundSummary.Enabled == true then
+							game:GetService("ReplicatedStorage"):WaitForChild("Packages"):WaitForChild("_Index"):WaitForChild("sleitnick_knit@1.7.0"):WaitForChild("knit"):WaitForChild("Services"):WaitForChild("GameService"):WaitForChild("RF"):WaitForChild("EndGameVote"):InvokeServer("Replay")
+							task.wait(0.5)
+						end
+					end
+				end,print)
+			end
+		end)
+	end
+})
+
+
+Ingame:AddToggle("Auto Next", {
+	Title = "Auto Next",
+	Description = "Go to next stage",
+	Default = _G.AutoNext,
+	Callback = function(bool)
+		_G.AutoNext = bool
+		saveSettings()
+		task.spawn(function()
+			while _G.AutoNext and task.wait() do
+				xpcall(function()
+					if game.PlaceId ~= 123662243100680 then
+						if playerGui.RoundSummary.Enabled == true then
+							game:GetService("ReplicatedStorage"):WaitForChild("Packages"):WaitForChild("_Index"):WaitForChild("sleitnick_knit@1.7.0"):WaitForChild("knit"):WaitForChild("Services"):WaitForChild("GameService"):WaitForChild("RF"):WaitForChild("EndGameVote"):InvokeServer("Next")
+							task.wait(0.5)
+						end
+					end
+				end,print)
+			end
+		end)
+	end
+})
+
+Ingame:AddToggle("Auto Start Game", {
+	Title = "Auto Start Game",
+	Description = "Start your game",
+	Default = _G.AutoStart,
+	Callback = function(bool)
+		_G.AutoStart = bool
+		saveSettings()
+		task.spawn(function()
+			while _G.AutoStart and task.wait() do
+				xpcall(function()
+					if game.PlaceId ~= 123662243100680 then
+						if playerGui.GameUI.VoteStart.Main.Button.Visible == true then
+							game:GetService("ReplicatedStorage"):WaitForChild("Packages"):WaitForChild("_Index"):WaitForChild("sleitnick_knit@1.7.0"):WaitForChild("knit"):WaitForChild("Services"):WaitForChild("GameService"):WaitForChild("RF"):WaitForChild("VoteStartRound"):InvokeServer()
+							task.wait(0.5)
+						end
+					end
+				end,print)
+			end
+		end)
+	end
+})
+
+
+local Input = webhook:AddInput("Url Webhook", {
+	Title = "Url Webhook",
+	Default = _G.Url,
+	Placeholder = "Here",
+	Numeric = false, -- Only allows numbers
+	Finished = false, -- Only calls callback when you press enter
+	Callback = function(Value)
+		_G.Url = Value
+		saveSettings()
+	end
+})
+
+
+webhook:AddToggle("Auto Send Webhook", {
+	Title = "Auto Send Webhook",
+	Description = "Send Webhook After Finished Game",
+	Default = _G.Send, 
+	Callback = function(bool)
+		_G.Send = bool
+		saveSettings()
+		local data = game:GetService("Players").LocalPlayer.PlayerGui.HUD.Bottom.Currency
+
+		if game.PlaceId ~= 123662243100680 then
+			playerGui.RoundSummary:GetPropertyChangedSignal("Enabled"):Connect(function()
+				if playerGui.RoundSummary.Enabled == true then
+					if _G.Send then
+						request({
+							Url = _G.Url,
+							Method = "POST",
+							Headers = {
+								["Content-Type"] = "application/json"
+							},
+							Body = ([[{
+        					"content": null,
+        					"embeds": [
+           						{
+                					"title": "**Silver Hub Webhook**",
+               						"description": "**PlayerStats**",
+                					"color": 15272777,
+                					"fields": [
+                    					{
+                        					"name": "**Gems** 💎",
+                        					"value": "```\nGems:  %s [💎]\n```"
+                    					},
+                    					{
+                        					"name": "**Coins** 💸",
+                        					"value": "```\nCoins:  %s [💸]\n```"
+                   						},
+                    					{
+                        					"name": "**Bubble** 🧼",
+                       						"value": "```\nBubble:  %s [🧼]\n```"
+                    					}
+                					],
+                					"image": {
+                    					"url": "https://media1.tenor.com/m/NKyVYAH9AZUAAAAC/kusuriya-no-hitorigoto-trailer.gif"
+            			    		}
+            					}
+        					],
+        					"attachments": []
+   						}]]):format(data.Gems.Title.Text,data.Coins.Title.Text,data.EventCurrency.Title.Text)
+						})
+						task.wait(2.5)
+					end
+				end
+			end)
+		end 
+	end
+})
+
+
+
+SaveManager:SetLibrary(Fluent)
+InterfaceManager:SetLibrary(Fluent)
+
+InterfaceManager:BuildInterfaceSection(Tabs.Settings)
+SaveManager:BuildConfigSection(Tabs.Settings)
+
+
+
+
+
+
+
+
 local RecordMacroTable = {}
 
 local path = my_hub.."/"..map.."/Macro/"
@@ -1125,298 +1434,5 @@ end)
 
 
 
-local Slider = Full_Auto_Play:AddSlider("Placement Size", {
-	Title = "Placement Size",
-	Description = "Select Placement Size For PlaceTower",
-	Default = _G.Size or 0,
-	Min = 0,
-	Max = 15,
-	Rounding = 0,
-	Callback = function(Value)
-		_G.Size = Value
-		saveSettings()
-		gen_size()
-	end
-})
 
 
-local Sliderr = Full_Auto_Play:AddSlider("Placement Distance", {
-	Title = "Placement Distance",
-	Description = "Select Placement Distance For PlaceTower",
-	Default = _G.Distance or 0,
-	Min = 0,
-	Max = 100,
-	Rounding = 0,
-	Callback = function(Value)
-		_G.Distance = Value
-		saveSettings()
-		create_line()
-	end
-})
-
-local mamung = Full_Auto_Play:AddDropdown("Select Slot", {
-	Title = "Select Slot",
-	Description = "",
-	Values = {1,2,3,4,5},
-	Multi = true,
-	Default = _G.Selectslot or {},
-	Callback = function(ezs)
-		_G.Selectslot = ezs
-		saveSettings()
-	end
-})
-
-
-Full_Auto_Play:AddToggle("Show Hologram", {
-	Title = "Show Hologram",
-	Default = _G.Hologram,
-	Callback = function(bool)
-		_G.Hologram = bool
-		saveSettings()
-		if _G.Hologram then
-			task.spawn(function()
-				while _G.Hologram and task.wait() do
-					xpcall(function()
-						if game.PlaceId ~= 123662243100680 then
-							workspace.CenterPart:FindFirstChild("CirclePart").Transparency = 0.5
-							repeat task.wait() until not _G.Hologram
-							workspace.CenterPart:FindFirstChild("CirclePart").Transparency = 1
-						end
-					end,print)
-				end
-			end)
-		end
-	end
-})
-
-
-Full_Auto_Play:AddToggle("Fully Auto Play", {
-	Title = "Fully Auto Play",
-	Default = _G.autoplay,
-	Callback = function(bool)
-		_G.autoplay = bool
-		saveSettings()
-		if _G.autoplay then
-			task.spawn(function()
-				while _G.autoplay and task.wait() do
-					xpcall(function()
-						if game.PlaceId ~= 123662243100680 then
-							local enemy = workspace.Enemies:FindFirstChildOfClass("Model").RootPart.Position
-							for i, v in pairs(workspace.GeneratedParts:GetChildren()) do
-								for _,slot in pairs({1,2,3,4,5}) do
-									if _G.Selectslot[slot] then
-										if tonumber(v.Name) == tonumber(_G.Distance) then
-											workspace.CenterPart.CFrame = v.CFrame
-											for e,unit in pairs(workspace.CenterPart:GetChildren()) do
-												if unit.Name ~= "CirclePart" then
-													local args = {
-														[1] = CFrame.new(unit.Position.X, enemy.Y-0.3, unit.Position.Z),
-														[2] = slot
-													}
-
-													game:GetService("ReplicatedStorage"):WaitForChild("Packages"):WaitForChild("_Index"):WaitForChild("sleitnick_knit@1.7.0"):WaitForChild("knit"):WaitForChild("Services"):WaitForChild("TowerService"):WaitForChild("RF"):WaitForChild("PlaceTower"):InvokeServer(unpack(args))
-												end
-											end
-										end
-									end
-								end
-							end
-
-							for _,unit in pairs(workspace.Friendlies:GetChildren()) do
-								local args = {
-									[1] = unit:GetAttribute("Id")
-								}
-
-								game:GetService("ReplicatedStorage"):WaitForChild("Packages"):WaitForChild("_Index"):WaitForChild("sleitnick_knit@1.7.0"):WaitForChild("knit"):WaitForChild("Services"):WaitForChild("GameService"):WaitForChild("RF"):WaitForChild("UpgradeTower"):InvokeServer(unpack(args))
-							end
-						end
-					end,print)
-				end
-			end)
-		end
-	end
-})
-
-local Select_Speed = Ingame:AddDropdown("Select Speed", {
-	Title = "Select Speed",
-	Values = {1 ,2 ,3 ,5},
-	Multi = false,
-	Default = _G.selectedSpeed,
-	Callback = function(selected)
-		_G.selectedSpeed = selected
-		saveSettings()
-	end
-})
-
-Ingame:AddToggle("Auto Speed Vote", {
-	Title = "Auto Speed Vote",
-	Description = "Automatic speed up",
-	Default = _G.Speed, 
-	Callback = function(bool)
-		_G.Speed = bool
-		saveSettings()
-		local check = false
-
-		task.spawn(function()
-			while _G.Speed and task.wait() do
-				xpcall(function()
-					if game.PlaceId ~= 123662243100680 then
-						if not check then
-							local args = {
-								[1] = convert_speed(_G.selectedSpeed)
-							}
-
-							game:GetService("ReplicatedStorage"):WaitForChild("Packages"):WaitForChild("_Index"):WaitForChild("sleitnick_knit@1.7.0"):WaitForChild("knit"):WaitForChild("Services"):WaitForChild("GameService"):WaitForChild("RF"):WaitForChild("ChangeGameSpeed"):InvokeServer(unpack(args))
-							task.wait(1)
-							check = true
-						end
-					end
-				end,print)
-			end
-		end)
-	end
-})
-
-
-Ingame:AddToggle("Auto Replay", {
-	Title = "Auto Replay",
-	Description = "Start game again / Replay game",
-	Default = _G.AutoReplay,
-	Callback = function(bool)
-		_G.AutoReplay = bool
-		saveSettings()
-		task.spawn(function()
-			while _G.AutoReplay and task.wait() do
-				xpcall(function()
-					if game.PlaceId ~= 123662243100680 then
-						if playerGui.RoundSummary.Enabled == true then
-							game:GetService("ReplicatedStorage"):WaitForChild("Packages"):WaitForChild("_Index"):WaitForChild("sleitnick_knit@1.7.0"):WaitForChild("knit"):WaitForChild("Services"):WaitForChild("GameService"):WaitForChild("RF"):WaitForChild("EndGameVote"):InvokeServer("Replay")
-							task.wait(0.5)
-						end
-					end
-				end,print)
-			end
-		end)
-	end
-})
-
-
-Ingame:AddToggle("Auto Next", {
-	Title = "Auto Next",
-	Description = "Go to next stage",
-	Default = _G.AutoNext,
-	Callback = function(bool)
-		_G.AutoNext = bool
-		saveSettings()
-		task.spawn(function()
-			while _G.AutoNext and task.wait() do
-				xpcall(function()
-					if game.PlaceId ~= 123662243100680 then
-						if playerGui.RoundSummary.Enabled == true then
-							game:GetService("ReplicatedStorage"):WaitForChild("Packages"):WaitForChild("_Index"):WaitForChild("sleitnick_knit@1.7.0"):WaitForChild("knit"):WaitForChild("Services"):WaitForChild("GameService"):WaitForChild("RF"):WaitForChild("EndGameVote"):InvokeServer("Next")
-							task.wait(0.5)
-						end
-					end
-				end,print)
-			end
-		end)
-	end
-})
-
-Ingame:AddToggle("Auto Start Game", {
-	Title = "Auto Start Game",
-	Description = "Start your game",
-	Default = _G.AutoStart,
-	Callback = function(bool)
-		_G.AutoStart = bool
-		saveSettings()
-		task.spawn(function()
-			while _G.AutoStart and task.wait() do
-				xpcall(function()
-					if game.PlaceId ~= 123662243100680 then
-						if playerGui.GameUI.VoteStart.Main.Button.Visible == true then
-							game:GetService("ReplicatedStorage"):WaitForChild("Packages"):WaitForChild("_Index"):WaitForChild("sleitnick_knit@1.7.0"):WaitForChild("knit"):WaitForChild("Services"):WaitForChild("GameService"):WaitForChild("RF"):WaitForChild("VoteStartRound"):InvokeServer()
-							task.wait(0.5)
-						end
-					end
-				end,print)
-			end
-		end)
-	end
-})
-
-
-local Input = webhook:AddInput("Url Webhook", {
-	Title = "Url Webhook",
-	Default = _G.Url,
-	Placeholder = "Here",
-	Numeric = false, -- Only allows numbers
-	Finished = false, -- Only calls callback when you press enter
-	Callback = function(Value)
-		_G.Url = Value
-		saveSettings()
-	end
-})
-
-
-webhook:AddToggle("Auto Send Webhook", {
-	Title = "Auto Send Webhook",
-	Description = "Send Webhook After Finished Game",
-	Default = _G.Send, 
-	Callback = function(bool)
-		_G.Send = bool
-		saveSettings()
-		local data = game:GetService("Players").LocalPlayer.PlayerGui.HUD.Bottom.Currency
-
-		if game.PlaceId ~= 123662243100680 then
-			playerGui.RoundSummary:GetPropertyChangedSignal("Enabled"):Connect(function()
-				if playerGui.RoundSummary.Enabled == true then
-					if _G.Send then
-						request({
-							Url = _G.Url,
-							Method = "POST",
-							Headers = {
-								["Content-Type"] = "application/json"
-							},
-							Body = ([[{
-        					"content": null,
-        					"embeds": [
-           						{
-                					"title": "**Silver Hub Webhook**",
-               						"description": "**PlayerStats**",
-                					"color": 15272777,
-                					"fields": [
-                    					{
-                        					"name": "**Gems** 💎",
-                        					"value": "```\nGems:  %s [💎]\n```"
-                    					},
-                    					{
-                        					"name": "**Coins** 💸",
-                        					"value": "```\nCoins:  %s [💸]\n```"
-                   						},
-                    					{
-                        					"name": "**Bubble** 🧼",
-                       						"value": "```\nBubble:  %s [🧼]\n```"
-                    					}
-                					],
-                					"image": {
-                    					"url": "https://media1.tenor.com/m/NKyVYAH9AZUAAAAC/kusuriya-no-hitorigoto-trailer.gif"
-            			    		}
-            					}
-        					],
-        					"attachments": []
-   						}]]):format(data.Gems.Title.Text,data.Coins.Title.Text,data.EventCurrency.Title.Text)
-						})
-						task.wait(2.5)
-					end
-				end
-			end)
-		end 
-	end
-})
-
-SaveManager:SetLibrary(Fluent)
-InterfaceManager:SetLibrary(Fluent)
-
-InterfaceManager:BuildInterfaceSection(Tabs.Settings)
-SaveManager:BuildConfigSection(Tabs.Settings)
