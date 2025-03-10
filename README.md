@@ -1,3 +1,4 @@
+print("teeee")
 local function checkLine(s)
 	local a = 0
 	for i in string.gmatch(s, "[^\n]+") do  
@@ -765,6 +766,365 @@ Misc:AddToggle("Anti AFK", {
 	end})
 
 
+local RecordMacroTable = {}
+
+local path = my_hub.."/"..map.."/Macro/"
+
+local ye = {}
+
+for i,v in pairs(listfiles(path)) do 
+	table.insert(ye,({v:gsub(path,"")})[1])
+end
+
+local nameconfig = nil
+
+local Input = Macro:AddInput("Input", {
+	Title = "Create Macro",
+	Default = nameconfig,
+	Placeholder = "Name Macro",
+	Numeric = false,
+	Finished = true,
+	Callback = function(text)
+		nameconfig = text
+		writefile(path..nameconfig ..".txt","")
+	end
+})
+
+local Select_Macro = Macro:AddDropdown("Select Macro", {
+	Title = "Select Macro",
+	Values = ye,
+	Multi = false,
+	Default = _G.selectconfig,
+	Callback = function(tab)
+		_G.selectconfig = tab
+		saveSettings()
+	end
+})
+
+local function Refresh()
+	ye = {}
+	for i,v in pairs(listfiles(path)) do 
+		table.insert(ye,({v:gsub(path,"")})[1])
+		Select_Macro:SetValues(ye)
+	end
+end
+
+Macro:AddButton({
+	Title = "Refresh Macro",
+	Description = "",
+	Callback = Refresh
+})
+
+Refresh()
+
+Macro:AddButton({
+	Title = "Delete file",
+	Description = "",
+	Callback = function(ez)
+		_G.Delete = ez
+		delfile(path.._G.selectconfig)
+	end})
+
+
+local basetime = 0
+
+if game.PlaceId ~= 123662243100680 then
+	task.spawn(function()
+		while true do 
+			local realtime_wait = wait()
+			if playerGui.GameUI.VoteStart.Main.Button.Visible == false then 
+				basetime = basetime + realtime_wait
+			else
+				basetime = 0
+			end
+		end
+	end)
+end
+
+
+local bubbleChat = game:GetService("CoreGui").ExperienceChat.bubbleChat:FindFirstChildOfClass("BillboardGui")
+if bubbleChat then
+	bubbleChat.Name = string.gsub(bubbleChat.Name, "BubbleChat_", "")
+	ownerid = bubbleChat.Name
+end
+
+
+local xd = nil
+
+local toggleRecord = Record_Macro:AddToggle("toggleRecord", {Title = "Start Record", Default = xd })
+toggleRecord:OnChanged(function(record)
+	xd = record
+	if xd then
+		if game.PlaceId ~= 123662243100680 then
+			RecordMacroTable = {}
+		end
+	end
+end)
+
+if game.PlaceId ~= 123662243100680 then
+	task.spawn(function()
+		local actionIndex
+
+		repeat actionIndex = 1 until actionIndex == 1
+
+		workspace.Friendlies.ChildAdded:Connect(function (Unit)
+			if not xd then return end
+
+			if tonumber(Unit:GetAttribute("OwnerId")) ~= tonumber(ownerid) then return end
+
+			local unitCost = tonumber(game:GetService("ReplicatedStorage").LiveSheets.UnitValues[Unit.Name].Cost.Value)
+			table.insert(RecordMacroTable,{
+				["Index"] = actionIndex,
+				["Type"] = "Place",
+				["Time"] = basetime,
+				["Data"] = {
+					["Name"] = Unit.Name,
+					["CFrame"] = Unit.RootPart.CFrame,
+					["Cost"] = unitCost
+				}
+			})
+			writefile(path .. _G.selectconfig, convert(RecordMacroTable))
+			actionIndex = actionIndex + 1
+
+			Unit:GetAttributeChangedSignal("Upgrade"):Connect(function()
+				if not xd then return end
+
+				if tonumber(Unit:GetAttribute("OwnerId")) ~= tonumber(ownerid) then return end
+
+				local upgradeLevel = Unit:GetAttribute("Upgrade")
+				local upgradeCost = tonumber(game.ReplicatedStorage.LiveSheets.UnitUpgrades[Unit.Name][tostring(upgradeLevel)].Cost.Value)
+				table.insert(RecordMacroTable, {
+					["Index"] = actionIndex,
+					["Type"] = "Upgrade",
+					["Time"] = basetime,
+					["Data"] = {
+						["Name"] = Unit.Name,
+						["CFrame"] = Unit.WorldPivot,
+						["UpgradeLevel"] = upgradeLevel,
+						["Cost"] = upgradeCost
+					}
+				})
+				writefile(path .. _G.selectconfig, convert(RecordMacroTable))
+				actionIndex = actionIndex + 1
+			end)
+		end)
+
+		workspace.Friendlies.ChildRemoved:Connect(function (Unit)
+			if not xd then return end
+
+			if tonumber(Unit:GetAttribute("OwnerId")) ~= tonumber(ownerid) then return end
+
+			table.insert(RecordMacroTable,{
+				["Index"] = actionIndex,
+				["Type"] = "Sell",
+				["Time"] = basetime,
+				["Data"] = {
+					["CFrame"] = Unit.WorldPivot,
+					["Cost"] = 0
+				}
+			})
+			writefile(path .. _G.selectconfig, convert(RecordMacroTable))
+			actionIndex = actionIndex + 1
+		end)
+	end)
+end
+
+
+
+
+local ezeeeeee = Play_Macro:AddDropdown("Select Mode", {
+	Title = "Select Mode",
+	Values = {"Time","Money"},
+	Multi = false,
+	Default = _G.modee,
+	Callback = function(ez)
+		_G.modee = ez
+		saveSettings()
+	end
+})
+
+
+local togglePlay = Play_Macro:AddToggle("togglePlay", {Title = "Play Macro", Default = _G.Play })
+togglePlay:OnChanged(function(play)
+	_G.Play = play
+	saveSettings()
+	task.spawn(function()
+		if game.PlaceId ~= 123662243100680 then
+			if _G.modee == "Time" then
+				repeat task.wait()
+					if _G.Play then 
+						local datamacro = readfile(path.._G.selectconfig)
+						local real = loadstring("return "..datamacro)()
+						if #real > 0 and real[#real].Time > basetime then
+							for i,v in pairs(real) do 
+								if _G.Play then
+									repeat wait() until basetime >= v.Time
+									if v["Type"] == "Place" then
+										for e,z in pairs(playerGui.HUD.Bottom.Hotbar:GetChildren()) do
+											if z:IsA("TextButton") then
+												local viewport = z.Content.TowerInfo:FindFirstChildOfClass("ViewportFrame")
+												if viewport then
+													local worldMoyel = viewport:FindFirstChildOfClass("WorldModel")
+													local kuy = worldMoyel:FindFirstChildOfClass("Model").Name
+													if kuy == v.Data.Name then
+														local args = {
+															[1] = v.Data.CFrame,
+															[2] = tonumber(z.Name)
+														}
+
+														game:GetService("ReplicatedStorage"):WaitForChild("Packages"):WaitForChild("_Index"):WaitForChild("sleitnick_knit@1.7.0"):WaitForChild("knit"):WaitForChild("Services"):WaitForChild("TowerService"):WaitForChild("RF"):WaitForChild("PlaceTower"):InvokeServer(unpack(args))
+													end
+												end
+											end
+										end
+									elseif v["Type"] == "Upgrade" then
+
+										local num = 0
+
+										local current = 1
+
+										local current_instance = nil
+
+										for _,unit in pairs(workspace.Friendlies:GetChildren()) do
+											local dis = (v.Data.CFrame.Position-unit.RootPart.Position).Magnitude
+											if dis < current then
+												current = dis
+												current_instance = unit
+											end
+										end
+										if current_instance then
+											if num < 1 then
+												local args = {
+													[1] = current_instance:GetAttribute("Id")
+												}
+
+												game:GetService("ReplicatedStorage"):WaitForChild("Packages"):WaitForChild("_Index"):WaitForChild("sleitnick_knit@1.7.0"):WaitForChild("knit"):WaitForChild("Services"):WaitForChild("GameService"):WaitForChild("RF"):WaitForChild("UpgradeTower"):InvokeServer(unpack(args))
+												num = num + 1
+											end
+										end
+									elseif v["Type"] == "Sell" then
+
+										local num = 0
+
+										local current = 1
+
+										local current_instance = nil
+
+										for _,unit in pairs(workspace.Friendlies:GetChildren()) do
+											local dis = (v.Data.CFrame.Position-unit.RootPart.Position).Magnitude
+											if dis < current then
+												current = dis
+												current_instance = unit
+											end
+										end
+										if current_instance then
+											if num < 1 then
+												local args = {
+													[1] = current_instance:GetAttribute("Id")
+												}
+
+												game:GetService("ReplicatedStorage"):WaitForChild("Packages"):WaitForChild("_Index"):WaitForChild("sleitnick_knit@1.7.0"):WaitForChild("knit"):WaitForChild("Services"):WaitForChild("TowerService"):WaitForChild("RF"):WaitForChild("SellTower"):InvokeServer(unpack(args))
+												num = num + 1
+											end
+										end
+									end
+								end
+							end
+						end
+					end
+				until not _G.Play
+			elseif _G.modee == "Money" then
+				repeat
+					task.wait()
+					if _G.Play then
+						local datamacro = readfile(path.._G.selectconfig)
+						local real = loadstring("return "..datamacro)()
+						local actionIndex = 1
+						if #real > 0 and real[#real].Index >= actionIndex then
+							for i,v in pairs(real) do
+								if _G.Play then
+									if game.PlaceId ~= 123662243100680 then
+										if v["Index"] >= actionIndex then
+											local a	
+											repeat task.wait()
+												a = string.gsub(game:GetService("Players").LocalPlayer.PlayerGui.HUD.Bottom.GameCurrency.Coins.Title.Text, "%D", "")
+											until tonumber(a) >= tonumber(v.Data.Cost)
+											if v["Type"] == "Place" then
+												for e,z in pairs(playerGui.HUD.Bottom.Hotbar:GetChildren()) do
+													if z:IsA("TextButton") then
+														local viewport = z.Content.TowerInfo:FindFirstChildOfClass("ViewportFrame")
+														if viewport then
+															local worldMoyel = viewport:FindFirstChildOfClass("WorldModel")
+															local kuy = worldMoyel:FindFirstChildOfClass("Model").Name
+															if kuy == v.Data.Name then
+																local args = {
+																	[1] = v.Data.CFrame,
+																	[2] = tonumber(z.Name)
+																}
+																game:GetService("ReplicatedStorage"):WaitForChild("Packages"):WaitForChild("_Index"):WaitForChild("sleitnick_knit@1.7.0"):WaitForChild("knit"):WaitForChild("Services"):WaitForChild("TowerService"):WaitForChild("RF"):WaitForChild("PlaceTower"):InvokeServer(unpack(args))
+																task.wait(0.5)
+															end
+														end
+													end
+												end
+											elseif v["Type"] == "Upgrade" then
+												local num = 0
+												local current = 1
+												local current_instance = nil
+												for _,unit in pairs(workspace.Friendlies:GetChildren()) do
+													local dis = (v.Data.CFrame.Position-unit.RootPart.Position).Magnitude
+													if dis < current then
+														current = dis
+														current_instance = unit
+													end
+												end
+												if current_instance then
+													if num < 1 then
+														local args = {
+															[1] = current_instance:GetAttribute("Id")
+														}
+														game:GetService("ReplicatedStorage"):WaitForChild("Packages"):WaitForChild("_Index"):WaitForChild("sleitnick_knit@1.7.0"):WaitForChild("knit"):WaitForChild("Services"):WaitForChild("GameService"):WaitForChild("RF"):WaitForChild("UpgradeTower"):InvokeServer(unpack(args))
+														num = num + 1
+														task.wait(0.5)
+													end
+												end
+											elseif v["Type"] == "Sell" then
+												local num = 0
+												local current = 1
+												local current_instance = nil
+												for _,unit in pairs(workspace.Friendlies:GetChildren()) do
+													local dis = (v.Data.CFrame.Position-unit.RootPart.Position).Magnitude
+													if dis < current then
+														current = dis
+														current_instance = unit
+													end
+												end
+												if current_instance then
+													if num < 1 then
+														local args = {
+															[1] = current_instance:GetAttribute("Id")
+														}
+														game:GetService("ReplicatedStorage"):WaitForChild("Packages"):WaitForChild("_Index"):WaitForChild("sleitnick_knit@1.7.0"):WaitForChild("knit"):WaitForChild("Services"):WaitForChild("TowerService"):WaitForChild("RF"):WaitForChild("SellTower"):InvokeServer(unpack(args))
+														num = num + 1
+														task.wait(0.5)
+													end
+												end
+											end
+											actionIndex = v.Index + 1
+											print(actionIndex)
+										end
+									end
+								end
+							end
+						end
+						task.wait(0.1)
+						repeat task.wait() until basetime < real[#real].Time
+					end
+				until not _G.Play
+			end
+		end
+	end)
+end)
 
 
 
@@ -1059,380 +1419,8 @@ webhook:AddToggle("Auto Send Webhook", {
 	end
 })
 
-
-
 SaveManager:SetLibrary(Fluent)
 InterfaceManager:SetLibrary(Fluent)
 
 InterfaceManager:BuildInterfaceSection(Tabs.Settings)
 SaveManager:BuildConfigSection(Tabs.Settings)
-
-
-
-
-
-
-
-
-local RecordMacroTable = {}
-
-local path = my_hub.."/"..map.."/Macro/"
-
-local ye = {}
-
-for i,v in pairs(listfiles(path)) do 
-	table.insert(ye,({v:gsub(path,"")})[1])
-end
-
-local nameconfig = nil
-
-local Input = Macro:AddInput("Input", {
-	Title = "Create Macro",
-	Default = nameconfig,
-	Placeholder = "Name Macro",
-	Numeric = false,
-	Finished = true,
-	Callback = function(text)
-		nameconfig = text
-		writefile(path..nameconfig ..".txt","")
-	end
-})
-
-local Select_Macro = Macro:AddDropdown("Select Macro", {
-	Title = "Select Macro",
-	Values = ye,
-	Multi = false,
-	Default = _G.selectconfig,
-	Callback = function(tab)
-		_G.selectconfig = tab
-		saveSettings()
-	end
-})
-
-local function Refresh()
-	ye = {}
-	for i,v in pairs(listfiles(path)) do 
-		table.insert(ye,({v:gsub(path,"")})[1])
-		Select_Macro:SetValues(ye)
-	end
-end
-
-Macro:AddButton({
-	Title = "Refresh Macro",
-	Description = "",
-	Callback = Refresh
-})
-
-Refresh()
-
-Macro:AddButton({
-	Title = "Delete file",
-	Description = "",
-	Callback = function(ez)
-		_G.Delete = ez
-		delfile(path.._G.selectconfig)
-	end})
-
-
-local basetime = 0
-
-if game.PlaceId ~= 123662243100680 then
-	task.spawn(function()
-		while true do 
-			local realtime_wait = wait()
-			if playerGui.GameUI.VoteStart.Main.Button.Visible == false then 
-				basetime = basetime + realtime_wait
-			else
-				basetime = 0
-			end
-		end
-	end)
-end
-
-
-local bubbleChat = game:GetService("CoreGui").ExperienceChat.bubbleChat:FindFirstChildOfClass("BillboardGui")
-if bubbleChat then
-	bubbleChat.Name = string.gsub(bubbleChat.Name, "BubbleChat_", "")
-	ownerid = bubbleChat.Name
-end
-
-
-local xd = nil
-
-local toggleRecord = Record_Macro:AddToggle("toggleRecord", {Title = "Start Record", Default = xd })
-toggleRecord:OnChanged(function(record)
-	xd = record
-	if xd then
-		if game.PlaceId ~= 123662243100680 then
-			RecordMacroTable = {}
-		end
-	end
-end)
-
-if game.PlaceId ~= 123662243100680 then
-
-	local actionIndex
-
-	repeat actionIndex = 1 until actionIndex == 1
-
-	workspace.Friendlies.ChildAdded:Connect(function (Unit)
-		if not xd then return end
-
-		if tonumber(Unit:GetAttribute("OwnerId")) ~= tonumber(ownerid) then return end
-
-		local unitCost = tonumber(game:GetService("ReplicatedStorage").LiveSheets.UnitValues[Unit.Name].Cost.Value)
-		table.insert(RecordMacroTable,{
-			["Index"] = actionIndex,
-			["Type"] = "Place",
-			["Time"] = basetime,
-			["Data"] = {
-				["Name"] = Unit.Name,
-				["CFrame"] = Unit.RootPart.CFrame,
-				["Cost"] = unitCost
-			}
-		})
-		writefile(path .. _G.selectconfig, convert(RecordMacroTable))
-		actionIndex = actionIndex + 1
-
-		Unit:GetAttributeChangedSignal("Upgrade"):Connect(function()
-			if not xd then return end
-
-			if tonumber(Unit:GetAttribute("OwnerId")) ~= tonumber(ownerid) then return end
-
-			local upgradeLevel = Unit:GetAttribute("Upgrade")
-			local upgradeCost = tonumber(game.ReplicatedStorage.LiveSheets.UnitUpgrades[Unit.Name][tostring(upgradeLevel)].Cost.Value)
-			table.insert(RecordMacroTable, {
-				["Index"] = actionIndex,
-				["Type"] = "Upgrade",
-				["Time"] = basetime,
-				["Data"] = {
-					["Name"] = Unit.Name,
-					["CFrame"] = Unit.WorldPivot,
-					["UpgradeLevel"] = upgradeLevel,
-					["Cost"] = upgradeCost
-				}
-			})
-			writefile(path .. _G.selectconfig, convert(RecordMacroTable))
-			actionIndex = actionIndex + 1
-		end)
-	end)
-
-	workspace.Friendlies.ChildRemoved:Connect(function (Unit)
-		if not xd then return end
-
-		if tonumber(Unit:GetAttribute("OwnerId")) ~= tonumber(ownerid) then return end
-
-		table.insert(RecordMacroTable,{
-			["Index"] = actionIndex,
-			["Type"] = "Sell",
-			["Time"] = basetime,
-			["Data"] = {
-				["CFrame"] = Unit.WorldPivot,
-				["Cost"] = 0
-			}
-		})
-		writefile(path .. _G.selectconfig, convert(RecordMacroTable))
-		actionIndex = actionIndex + 1
-	end)
-end
-
-
-
-
-local ezeeeeee = Play_Macro:AddDropdown("Select Mode", {
-	Title = "Select Mode",
-	Values = {"Time","Money"},
-	Multi = false,
-	Default = _G.modee,
-	Callback = function(ez)
-		_G.modee = ez
-		saveSettings()
-	end
-})
-
-
-local togglePlay = Play_Macro:AddToggle("togglePlay", {Title = "Play Macro", Default = _G.Play })
-togglePlay:OnChanged(function(play)
-	_G.Play = play
-	saveSettings()
-	if game.PlaceId ~= 123662243100680 then
-		if _G.modee == "Time" then
-			repeat task.wait()
-				if _G.Play then 
-					local datamacro = readfile(path.._G.selectconfig)
-					local real = loadstring("return "..datamacro)()
-					if #real > 0 and real[#real].Time > basetime then
-						for i,v in pairs(real) do 
-							if _G.Play then
-								repeat wait() until basetime >= v.Time
-								if v["Type"] == "Place" then
-									for e,z in pairs(playerGui.HUD.Bottom.Hotbar:GetChildren()) do
-										if z:IsA("TextButton") then
-											local viewport = z.Content.TowerInfo:FindFirstChildOfClass("ViewportFrame")
-											if viewport then
-												local worldMoyel = viewport:FindFirstChildOfClass("WorldModel")
-												local kuy = worldMoyel:FindFirstChildOfClass("Model").Name
-												if kuy == v.Data.Name then
-													local args = {
-														[1] = v.Data.CFrame,
-														[2] = tonumber(z.Name)
-													}
-
-													game:GetService("ReplicatedStorage"):WaitForChild("Packages"):WaitForChild("_Index"):WaitForChild("sleitnick_knit@1.7.0"):WaitForChild("knit"):WaitForChild("Services"):WaitForChild("TowerService"):WaitForChild("RF"):WaitForChild("PlaceTower"):InvokeServer(unpack(args))
-												end
-											end
-										end
-									end
-								elseif v["Type"] == "Upgrade" then
-
-									local num = 0
-
-									local current = 1
-
-									local current_instance = nil
-
-									for _,unit in pairs(workspace.Friendlies:GetChildren()) do
-										local dis = (v.Data.CFrame.Position-unit.RootPart.Position).Magnitude
-										if dis < current then
-											current = dis
-											current_instance = unit
-										end
-									end
-									if current_instance then
-										if num < 1 then
-											local args = {
-												[1] = current_instance:GetAttribute("Id")
-											}
-
-											game:GetService("ReplicatedStorage"):WaitForChild("Packages"):WaitForChild("_Index"):WaitForChild("sleitnick_knit@1.7.0"):WaitForChild("knit"):WaitForChild("Services"):WaitForChild("GameService"):WaitForChild("RF"):WaitForChild("UpgradeTower"):InvokeServer(unpack(args))
-											num = num + 1
-										end
-									end
-								elseif v["Type"] == "Sell" then
-
-									local num = 0
-
-									local current = 1
-
-									local current_instance = nil
-
-									for _,unit in pairs(workspace.Friendlies:GetChildren()) do
-										local dis = (v.Data.CFrame.Position-unit.RootPart.Position).Magnitude
-										if dis < current then
-											current = dis
-											current_instance = unit
-										end
-									end
-									if current_instance then
-										if num < 1 then
-											local args = {
-												[1] = current_instance:GetAttribute("Id")
-											}
-
-											game:GetService("ReplicatedStorage"):WaitForChild("Packages"):WaitForChild("_Index"):WaitForChild("sleitnick_knit@1.7.0"):WaitForChild("knit"):WaitForChild("Services"):WaitForChild("TowerService"):WaitForChild("RF"):WaitForChild("SellTower"):InvokeServer(unpack(args))
-											num = num + 1
-										end
-									end
-								end
-							end
-						end
-					end
-				end
-			until not _G.Play
-		elseif _G.modee == "Money" then
-			repeat
-				task.wait()
-				if _G.Play then
-					local datamacro = readfile(path.._G.selectconfig)
-					local real = loadstring("return "..datamacro)()
-					local actionIndex = 1
-					if #real > 0 and real[#real].Index >= actionIndex then
-						for i,v in pairs(real) do
-							if _G.Play then
-								if game.PlaceId ~= 123662243100680 then
-									if v["Index"] >= actionIndex then
-										local a	
-										repeat task.wait()
-											a = string.gsub(game:GetService("Players").LocalPlayer.PlayerGui.HUD.Bottom.GameCurrency.Coins.Title.Text, "%D", "")
-										until tonumber(a) >= tonumber(v.Data.Cost)
-										if v["Type"] == "Place" then
-											for e,z in pairs(playerGui.HUD.Bottom.Hotbar:GetChildren()) do
-												if z:IsA("TextButton") then
-													local viewport = z.Content.TowerInfo:FindFirstChildOfClass("ViewportFrame")
-													if viewport then
-														local worldMoyel = viewport:FindFirstChildOfClass("WorldModel")
-														local kuy = worldMoyel:FindFirstChildOfClass("Model").Name
-														if kuy == v.Data.Name then
-															local args = {
-																[1] = v.Data.CFrame,
-																[2] = tonumber(z.Name)
-															}
-															game:GetService("ReplicatedStorage"):WaitForChild("Packages"):WaitForChild("_Index"):WaitForChild("sleitnick_knit@1.7.0"):WaitForChild("knit"):WaitForChild("Services"):WaitForChild("TowerService"):WaitForChild("RF"):WaitForChild("PlaceTower"):InvokeServer(unpack(args))
-															task.wait(0.5)
-														end
-													end
-												end
-											end
-										elseif v["Type"] == "Upgrade" then
-											local num = 0
-											local current = 1
-											local current_instance = nil
-											for _,unit in pairs(workspace.Friendlies:GetChildren()) do
-												local dis = (v.Data.CFrame.Position-unit.RootPart.Position).Magnitude
-												if dis < current then
-													current = dis
-													current_instance = unit
-												end
-											end
-											if current_instance then
-												if num < 1 then
-													local args = {
-														[1] = current_instance:GetAttribute("Id")
-													}
-													game:GetService("ReplicatedStorage"):WaitForChild("Packages"):WaitForChild("_Index"):WaitForChild("sleitnick_knit@1.7.0"):WaitForChild("knit"):WaitForChild("Services"):WaitForChild("GameService"):WaitForChild("RF"):WaitForChild("UpgradeTower"):InvokeServer(unpack(args))
-													num = num + 1
-													task.wait(0.5)
-												end
-											end
-										elseif v["Type"] == "Sell" then
-											local num = 0
-											local current = 1
-											local current_instance = nil
-											for _,unit in pairs(workspace.Friendlies:GetChildren()) do
-												local dis = (v.Data.CFrame.Position-unit.RootPart.Position).Magnitude
-												if dis < current then
-													current = dis
-													current_instance = unit
-												end
-											end
-											if current_instance then
-												if num < 1 then
-													local args = {
-														[1] = current_instance:GetAttribute("Id")
-													}
-													game:GetService("ReplicatedStorage"):WaitForChild("Packages"):WaitForChild("_Index"):WaitForChild("sleitnick_knit@1.7.0"):WaitForChild("knit"):WaitForChild("Services"):WaitForChild("TowerService"):WaitForChild("RF"):WaitForChild("SellTower"):InvokeServer(unpack(args))
-													num = num + 1
-													task.wait(0.5)
-												end
-											end
-										end
-										actionIndex = v.Index + 1
-										print(actionIndex)
-									end
-								end
-							end
-						end
-					end
-					task.wait(0.1)
-					repeat task.wait() until basetime < real[#real].Time
-				end
-			until not _G.Play
-		end
-	end
-end)
-
-
-
-
-
-
